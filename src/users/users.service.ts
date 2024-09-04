@@ -9,12 +9,14 @@ export class UsersService {
   getAllUsers(): User[] {
     return this.users;
   }
-  createUser(name: string, email: string, password: string): User {
+  createUser(CreateTaskDTO): User {
+    const { name, email, password } = CreateTaskDTO;
     const user: User = {
       id: uuid(),
       name,
       email,
       password,
+      //confirmPassword
     };
     this.users.push(user);
 
