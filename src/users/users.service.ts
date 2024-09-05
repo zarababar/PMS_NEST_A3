@@ -1,25 +1,23 @@
-import { Injectable } from '@nestjs/common';
-import { User } from './users.model';
-import { v4 as uuid } from 'uuid';
-
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { UsersRepository } from './users.repository';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { User } from './user.entity';
+import { DataSource } from 'typeorm';
 @Injectable()
 export class UsersService {
-  private users: User[] = [];
+  private readonly usersRepository: UsersRepository;
 
-  getAllUsers(): User[] {
-    return this.users;
+  constructor(@InjectDataSource() private readonly dataSource: DataSource) {
+    this.usersRepository = new UsersRepository(this.dataSource.manager);
   }
-  createUser(CreateTaskDTO): User {
-    const { name, email, password } = CreateTaskDTO;
-    const user: User = {
-      id: uuid(),
-      name,
-      email,
-      password,
-      //confirmPassword
-    };
-    this.users.push(user);
-
-    return user;
+  async getUserById(id: string): Promise<User> {
+    const found = await this.usersRepository.findOne({ where: { id } });
+    if (!found) {
+      throw new NotFoundException();
+    }
+    return found;
+  }
+  createUser(CreateUserDTO): Promise<User> {
+    return this.usersRepository.createUser(CreateUserDTO);
   }
 }
