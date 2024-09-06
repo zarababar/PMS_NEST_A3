@@ -1,4 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Exclude } from 'class-transformer';
+import { User } from 'src/users/user.entity';
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('product')
 export class Product {
@@ -13,4 +15,9 @@ export class Product {
 
   @Column('decimal')
   price: number;
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  @ManyToOne((_type) => User, (user) => user.products, { eager: false })
+  @Exclude({ toPlainOnly: true }) //json
+  user: User;
 }
