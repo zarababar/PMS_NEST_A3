@@ -51,16 +51,17 @@ export class ProductsController {
   @Patch('/:id/product')
   async updateProduct(
     @Param('id') id: string,
+    @GetUser() user: User,
     @Body() createProductsDTO: CreateProductsDTO,
   ): Promise<Product> {
     console.log('DTO received:', createProductsDTO);
-    return this.productService.updateProduct(id, createProductsDTO);
+    return this.productService.updateProduct(id, user, createProductsDTO);
   }
 
   @Get('/category/:id')
   async getCategoryProducts(
     @Param('id') categoryId: string,
-  ): Promise<Product[]> {
+  ): Promise<Category> {
     return this.productService.getCategoryProducts(categoryId);
   }
   @Get('/user/:id')

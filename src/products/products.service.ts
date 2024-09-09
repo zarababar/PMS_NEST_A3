@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -9,14 +10,12 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { Product } from './product.entity';
 import { CreateProductsDTO } from './dto/create-product.dto';
 import { User } from 'src/users/user.entity';
-import { UsersRepository } from 'src/users/users.repository';
 import { CategoryRepository } from 'src/categories/categories.repository';
 import { Category } from 'src/categories/category.entity';
 
 @Injectable()
 export class ProductsService {
   private readonly productsRepository: ProductsRepository;
-  private usersRepository: UsersRepository;
   private readonly categoryRepository: CategoryRepository;
 
   constructor(@InjectDataSource() private readonly dataSource: DataSource) {
@@ -51,6 +50,7 @@ export class ProductsService {
 
   async updateProduct(
     id: string,
+    user: User,
     createProductsDTO: CreateProductsDTO,
   ): Promise<Product> {
     try {
@@ -70,7 +70,12 @@ export class ProductsService {
               where: { id: categoryId },
             }),
           ]);
-
+          // Check if the current user is the owner of the product
+          if (product.user.id !== user.id) {
+            throw new ForbiddenException(
+              `You do not have permission to update this product!`,
+            );
+          }
           if (!product) {
             throw new NotFoundException(`Product with ID ${id} not found!`);
           }
@@ -102,6 +107,15 @@ export class ProductsService {
   }
 
   async deleteProduct(id: string, user: User): Promise<void> {
+    const product = await this.productsRepository.findOne({
+      where: { id },
+      relations: ['user'],
+    });
+    if (product.user.id !== user.id) {
+      throw new ForbiddenException(
+        `You do not have permission to update this product!`,
+      );
+    }
     const result = await this.productsRepository.delete({ id, user });
     if (result.affected === 0) {
       throw new NotFoundException(`Product with ${id} not found!`);
@@ -124,12 +138,17 @@ export class ProductsService {
     return products;
   }
 
-  async getCategoryProducts(categoryId: string): Promise<Product[]> {
+  async getCategoryProducts(categoryId: string): Promise<Category> {
     const categoryProducts = await this.categoryRepository.findOne({
       where: { id: categoryId },
       relations: ['products'],
     });
-    return categoryProducts.products;
+    return categoryProducts;
+    // const categoryProducts = await this.productsRepository.find({
+    //   where: { category: { id: categoryId } },
+    //   relations: ['category'],
+    // });
+    // return categoryProducts;
   }
   async getUserProducts(userId: string): Promise<Product[]> {
     const userProducts = await this.productsRepository.find({
