@@ -12,4 +12,8 @@ export class CreateProductsDTO {
   @IsNotEmpty()
   @IsNumber()
   price: number;
+
+  // @IsNotEmpty()
+  // @IsUUID('4')
+  category: string;
 }

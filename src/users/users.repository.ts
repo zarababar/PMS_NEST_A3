@@ -21,7 +21,6 @@ export class UsersRepository extends Repository<User> {
       name,
       email,
       password: hashedPassword,
-      products: [],
     });
     try {
       await this.save(user);

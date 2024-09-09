@@ -2,6 +2,11 @@ import { EntityManager, Repository } from 'typeorm';
 import { Product } from './product.entity';
 import { CreateProductsDTO } from './dto/create-product.dto';
 import { User } from 'src/users/user.entity';
+import { Category } from 'src/categories/category.entity';
+import {
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 
 export class ProductsRepository extends Repository<Product> {
   constructor(manager: EntityManager) {
@@ -11,22 +16,37 @@ export class ProductsRepository extends Repository<Product> {
   async createProduct(
     createProductsDTO: CreateProductsDTO,
     user: User,
-    entityManager: EntityManager,
+    transactionalEntityManager: EntityManager,
   ): Promise<Product> {
     try {
-      const { title, description, price } = createProductsDTO;
-      const product = this.create({
+      const { title, description, price, category } = createProductsDTO;
+
+      // Fetch the category from the database
+      const categoryData = await transactionalEntityManager.findOne(Category, {
+        where: { id: category },
+      });
+
+      if (!categoryData) {
+        throw new NotFoundException(`Category with ID ${category} not found`);
+      }
+
+      // Create the product entity
+      const product = transactionalEntityManager.create(Product, {
         title,
         description,
         price,
         user,
+        category: categoryData,
       });
-      // await this.save(product);
-      await entityManager.save(product);
+
+      // Save the product entity
+      await transactionalEntityManager.save(product);
+
       return product;
     } catch (error) {
-      // Log the error or handle it as needed
-      throw new Error(`Failed to create product: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to create product: ${error.message}`,
+      );
     }
   }
 }

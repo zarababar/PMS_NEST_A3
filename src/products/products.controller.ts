@@ -14,6 +14,7 @@ import { Product } from './product.entity';
 import { AuthGuard } from '@nestjs/passport';
 import { GetUser } from 'src/users/get-user.decorator';
 import { User } from 'src/users/user.entity';
+import { Category } from 'src/categories/category.entity';
 
 @Controller('products')
 @UseGuards(AuthGuard()) //route protecting
@@ -52,6 +53,18 @@ export class ProductsController {
     @Param('id') id: string,
     @Body() createProductsDTO: CreateProductsDTO,
   ): Promise<Product> {
+    console.log('DTO received:', createProductsDTO);
     return this.productService.updateProduct(id, createProductsDTO);
+  }
+
+  @Get('/category/:id')
+  async getCategoryProducts(
+    @Param('id') categoryId: string,
+  ): Promise<Product[]> {
+    return this.productService.getCategoryProducts(categoryId);
+  }
+  @Get('/user/:id')
+  async getUserProducts(@Param('id') userId: string): Promise<Product[]> {
+    return this.productService.getUserProducts(userId);
   }
 }

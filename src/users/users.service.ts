@@ -29,6 +29,14 @@ export class UsersService {
     }
     return found;
   }
+  async getUsersProducts(userId: string): Promise<User> {
+    const products = await this.usersRepository.findOne({
+      where: { id: userId },
+      relations: ['products'],
+    });
+
+    return products;
+  }
   async signUp(userDataDTO: UserDataDTO): Promise<User> {
     return this.usersRepository.createUser(userDataDTO);
   }
