@@ -1,25 +1,56 @@
-import { Injectable } from '@nestjs/common';
-import { User } from './users.model';
-import { v4 as uuid } from 'uuid';
-
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { UsersRepository } from './users.repository';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { User } from './user.entity';
+import { DataSource } from 'typeorm';
+import { AuthCredentialsDTO } from './dto/auth-credentials.dto';
+import { UserDataDTO } from './dto/userData.dto';
+import * as bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
+import { JwtPayload } from './jwt-payload.interface';
 @Injectable()
 export class UsersService {
-  private users: User[] = [];
+  private readonly usersRepository: UsersRepository;
 
-  getAllUsers(): User[] {
-    return this.users;
+  constructor(
+    @InjectDataSource() private readonly dataSource: DataSource,
+    private jwtService: JwtService,
+  ) {
+    this.usersRepository = new UsersRepository(this.dataSource.manager);
   }
-  createUser(CreateTaskDTO): User {
-    const { name, email, password } = CreateTaskDTO;
-    const user: User = {
-      id: uuid(),
-      name,
-      email,
-      password,
-      //confirmPassword
-    };
-    this.users.push(user);
+  async getUserById(id: string): Promise<User> {
+    const found = await this.usersRepository.findOne({ where: { id } });
+    if (!found) {
+      throw new NotFoundException();
+    }
+    return found;
+  }
+  async getUsersProducts(userId: string): Promise<User> {
+    const products = await this.usersRepository.findOne({
+      where: { id: userId },
+      relations: ['products'],
+    });
 
-    return user;
+    return products;
+  }
+  async signUp(userDataDTO: UserDataDTO): Promise<User> {
+    return this.usersRepository.createUser(userDataDTO);
+  }
+  async signin(
+    authCredentialsDTO: AuthCredentialsDTO,
+  ): Promise<{ accessToken: string }> {
+    const { email, password } = authCredentialsDTO;
+    const user = await this.usersRepository.findOne({ where: { email } });
+    if (user && (await bcrypt.compare(password, user.password))) {
+      const payload: JwtPayload = { userId: user.id };
+      const accessToken: string = await this.jwtService.sign(payload);
+      return { accessToken };
+    } else {
+      throw new UnauthorizedException('Please check your login credentials');
+    }
   }
 }
