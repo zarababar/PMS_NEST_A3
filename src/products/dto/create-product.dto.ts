@@ -13,7 +13,7 @@ export class CreateProductsDTO {
   @IsNumber()
   price: number;
 
-  // @IsNotEmpty()
-  // @IsUUID('4')
+  @IsNotEmpty()
+  @IsString()
   category: string;
 }

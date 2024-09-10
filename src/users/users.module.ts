@@ -6,13 +6,17 @@ import { UsersRepository } from './users.repository';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
+import { ConfigModule } from '@nestjs/config';
+import * as dotenv from 'dotenv';
 
+dotenv.config();
 @Module({
   imports: [
+    ConfigModule.forRoot(),
     PassportModule.register({ defaultStrategy: 'jwt' }), //work with jwt
     JwtModule.register({
       //export a service -> jwtservice
-      secret: 'topSecret',
+      secret: process.env.JWT_SECRET_KEY,
       signOptions: {
         expiresIn: 3600,
       },

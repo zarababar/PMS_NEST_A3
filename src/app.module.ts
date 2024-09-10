@@ -1,22 +1,28 @@
 import { Module } from '@nestjs/common';
 import { UsersModule } from './users/users.module';
-// import { ProductsController } from './products/products.controller';
-// import { ProductsService } from './products/products.service';
-// import { CategoriesController } from './categories/categories.controller';
-// import { CategoriesService } from './categories/categories.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 import { config } from './database/orm.config';
 import { ProductsModule } from './products/products.module';
-import { CategoriesModule } from './categories/categories.module';
-// import { CategoriesModule } from './categories/categories.module';
+import { SeedService } from './seeds/seeds.service';
+import { MulterModule } from '@nestjs/platform-express';
+import { UploadController } from './imageUpload/upload.controller';
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true, // Make the config globally available
+      envFilePath: `.env`, // Path to your .env file
+    }),
     TypeOrmModule.forRoot(config),
     ProductsModule,
     UsersModule,
-    CategoriesModule,
+    MulterModule.register({
+      dest: './uploads', // Set the destination folder for uploaded files
+    }),
   ],
-  // controllers: [ProductsController, CategoriesController],
-  // providers: [ProductsService, CategoriesService],
+
+  providers: [SeedService],
+
+  controllers: [UploadController],
 })
 export class AppModule {}

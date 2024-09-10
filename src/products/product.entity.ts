@@ -14,15 +14,17 @@ export class Product {
   @Column()
   description: string;
 
-  @Column('decimal')
+  @Column()
   price: number;
+
+  @Column('simple-array', { nullable: true }) // Use an array type to store multiple image paths
+  images: string[];
 
   @ManyToOne(() => Category, (category) => category.products, { eager: false })
   @Exclude({ toPlainOnly: true })
   category: Category;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  @ManyToOne((_type) => User, (user) => user.products, { eager: false })
+  @ManyToOne(() => User, (user) => user.products, { eager: false })
   @Exclude({ toPlainOnly: true }) //json
   user: User;
 }

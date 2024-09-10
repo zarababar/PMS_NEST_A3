@@ -17,6 +17,7 @@ export class ProductsRepository extends Repository<Product> {
     createProductsDTO: CreateProductsDTO,
     user: User,
     transactionalEntityManager: EntityManager,
+    images: Array<Express.Multer.File>,
   ): Promise<Product> {
     try {
       const { title, description, price, category } = createProductsDTO;
@@ -37,6 +38,7 @@ export class ProductsRepository extends Repository<Product> {
         price,
         user,
         category: categoryData,
+        images: images.map((file) => file.path), // Save image paths or URLs
       });
 
       // Save the product entity

@@ -25,15 +25,16 @@ export class ProductsService {
   async createProduct(
     createProductsDTO: CreateProductsDTO,
     user: User,
+    images: Array<Express.Multer.File>,
   ): Promise<Product> {
     try {
       return await this.dataSource.transaction(
         async (transactionalEntityManager) => {
-          // Use Promise.all if you have multiple concurrent operations
           const product = await this.productsRepository.createProduct(
             createProductsDTO,
             user,
             transactionalEntityManager,
+            images,
           );
 
           // Ensure the created product is returned correctly
@@ -41,10 +42,7 @@ export class ProductsService {
         },
       );
     } catch (error) {
-      console.error('Error creating product:', error);
-      throw new InternalServerErrorException(
-        'An error occurred while creating the product.',
-      );
+      throw new InternalServerErrorException(error);
     }
   }
 
@@ -52,6 +50,7 @@ export class ProductsService {
     id: string,
     user: User,
     createProductsDTO: CreateProductsDTO,
+    images: Array<Express.Multer.File>,
   ): Promise<Product> {
     try {
       return await this.dataSource.transaction(
@@ -65,12 +64,16 @@ export class ProductsService {
 
           // Perform concurrent fetch operations for product and category
           const [product, category] = await Promise.all([
-            transactionalEntityManager.findOne(Product, { where: { id } }),
+            transactionalEntityManager.findOne(Product, {
+              where: { id },
+              relations: ['user'],
+            }),
             transactionalEntityManager.findOne(Category, {
               where: { id: categoryId },
             }),
           ]);
-          // Check if the current user is the owner of the product
+
+          //Check if the current user is the owner of the product
           if (product.user.id !== user.id) {
             throw new ForbiddenException(
               `You do not have permission to update this product!`,
@@ -86,11 +89,14 @@ export class ProductsService {
             );
           }
 
+          const imagePaths = images.map((file) => file.path);
+
           // Update product properties
           product.title = title;
           product.description = description;
           product.price = price;
           product.category = category;
+          product.images = imagePaths;
 
           // Save the updated product
           await transactionalEntityManager.save(Product, product);
@@ -107,54 +113,107 @@ export class ProductsService {
   }
 
   async deleteProduct(id: string, user: User): Promise<void> {
-    const product = await this.productsRepository.findOne({
-      where: { id },
-      relations: ['user'],
-    });
-    if (product.user.id !== user.id) {
-      throw new ForbiddenException(
-        `You do not have permission to update this product!`,
+    try {
+      const product = await this.productsRepository.findOne({
+        where: { id },
+        relations: ['user'],
+      });
+
+      if (!product) {
+        throw new NotFoundException(`Product with ID ${id} not found!`);
+      }
+
+      if (product.user.id !== user.id) {
+        throw new ForbiddenException(
+          `You do not have permission to delete this product!`,
+        );
+      }
+
+      const result = await this.productsRepository.delete({ id });
+
+      if (result.affected === 0) {
+        throw new NotFoundException(`Product with ID ${id} not found!`);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'An error occurred while deleting the product.',
       );
-    }
-    const result = await this.productsRepository.delete({ id, user });
-    if (result.affected === 0) {
-      throw new NotFoundException(`Product with ${id} not found!`);
     }
   }
 
   async getProductInfo(id: string, user: User): Promise<Product> {
-    const product = await this.productsRepository.findOne({
-      where: { id, user },
-    });
-    if (!product) {
-      throw new NotFoundException(`Product with ${id} not found!`);
+    try {
+      const product = await this.productsRepository.findOne({
+        where: { id, user },
+      });
+
+      if (!product) {
+        throw new NotFoundException(`Product with ID ${id} not found!`);
+      }
+
+      return product;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'An error occurred while retrieving the product.',
+      );
     }
-    return product;
   }
-
   async getAllProducts(): Promise<Product[]> {
-    const products = await this.productsRepository.find();
-
-    return products;
+    try {
+      const products = await this.productsRepository.find();
+      return products;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'An error occurred while retrieving all products.',
+      );
+    }
   }
 
   async getCategoryProducts(categoryId: string): Promise<Category> {
-    const categoryProducts = await this.categoryRepository.findOne({
-      where: { id: categoryId },
-      relations: ['products'],
-    });
-    return categoryProducts;
-    // const categoryProducts = await this.productsRepository.find({
-    //   where: { category: { id: categoryId } },
-    //   relations: ['category'],
-    // });
-    // return categoryProducts;
+    try {
+      const categoryProducts = await this.categoryRepository.findOne({
+        where: { id: categoryId },
+        relations: ['products'],
+      });
+
+      if (!categoryProducts) {
+        throw new NotFoundException(
+          `Category with ID ${categoryId} not found!`,
+        );
+      }
+
+      return categoryProducts;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'An error occurred while retrieving the category products.',
+      );
+    }
   }
-  async getUserProducts(userId: string): Promise<Product[]> {
-    const userProducts = await this.productsRepository.find({
-      where: { user: { id: userId } },
-      relations: ['user'],
-    });
-    return userProducts;
+  async getUserProducts(
+    loggedInUser: User,
+    userId: string,
+  ): Promise<Product[]> {
+    try {
+      if (loggedInUser.id !== userId) {
+        throw new ForbiddenException(
+          `You do not have permission to access products for user ID ${userId}.`,
+        );
+      }
+      const userProducts = await this.productsRepository.find({
+        where: { user: { id: userId } },
+        relations: ['user'],
+      });
+
+      return userProducts;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'An error occurred while retrieving the user products.',
+      );
+    }
   }
 }
