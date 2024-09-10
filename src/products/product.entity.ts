@@ -14,8 +14,13 @@ export class Product {
   @Column()
   description: string;
 
-  @Column('decimal')
+  // @Column('decimal')
+  // price: number;
+  @Column()
   price: number;
+
+  @Column('simple-array', { nullable: true }) // Use an array type to store multiple image paths
+  images: string[];
 
   @ManyToOne(() => Category, (category) => category.products, { eager: false })
   @Exclude({ toPlainOnly: true })

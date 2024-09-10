@@ -25,6 +25,7 @@ export class ProductsService {
   async createProduct(
     createProductsDTO: CreateProductsDTO,
     user: User,
+    images: Array<Express.Multer.File>,
   ): Promise<Product> {
     try {
       return await this.dataSource.transaction(
@@ -34,6 +35,7 @@ export class ProductsService {
             createProductsDTO,
             user,
             transactionalEntityManager,
+            images,
           );
 
           // Ensure the created product is returned correctly
@@ -41,10 +43,7 @@ export class ProductsService {
         },
       );
     } catch (error) {
-      console.error('Error creating product:', error);
-      throw new InternalServerErrorException(
-        'An error occurred while creating the product.',
-      );
+      throw new InternalServerErrorException(error);
     }
   }
 
@@ -52,6 +51,7 @@ export class ProductsService {
     id: string,
     user: User,
     createProductsDTO: CreateProductsDTO,
+    images: Array<Express.Multer.File>,
   ): Promise<Product> {
     try {
       return await this.dataSource.transaction(
@@ -65,12 +65,16 @@ export class ProductsService {
 
           // Perform concurrent fetch operations for product and category
           const [product, category] = await Promise.all([
-            transactionalEntityManager.findOne(Product, { where: { id } }),
+            transactionalEntityManager.findOne(Product, {
+              where: { id },
+              relations: ['user'],
+            }),
             transactionalEntityManager.findOne(Category, {
               where: { id: categoryId },
             }),
           ]);
-          // Check if the current user is the owner of the product
+
+          //Check if the current user is the owner of the product
           if (product.user.id !== user.id) {
             throw new ForbiddenException(
               `You do not have permission to update this product!`,
@@ -86,11 +90,14 @@ export class ProductsService {
             );
           }
 
+          const imagePaths = images.map((file) => file.path);
+
           // Update product properties
           product.title = title;
           product.description = description;
           product.price = price;
           product.category = category;
+          product.images = imagePaths;
 
           // Save the updated product
           await transactionalEntityManager.save(Product, product);
@@ -144,11 +151,6 @@ export class ProductsService {
       relations: ['products'],
     });
     return categoryProducts;
-    // const categoryProducts = await this.productsRepository.find({
-    //   where: { category: { id: categoryId } },
-    //   relations: ['category'],
-    // });
-    // return categoryProducts;
   }
   async getUserProducts(userId: string): Promise<Product[]> {
     const userProducts = await this.productsRepository.find({
