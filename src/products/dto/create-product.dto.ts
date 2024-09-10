@@ -1,19 +1,19 @@
 import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
 export class CreateProductsDTO {
-  // @IsNotEmpty()
-  // @IsString()
+  @IsNotEmpty()
+  @IsString()
   title: string;
 
-  // @IsNotEmpty()
-  // @IsString()
+  @IsNotEmpty()
+  @IsString()
   description: string;
 
   @IsNotEmpty()
-  // @IsNumber()
+  @IsNumber()
   price: number;
 
-  // @IsNotEmpty()
-  // @IsUUID('4')
+  @IsNotEmpty()
+  @IsString()
   category: string;
 }

@@ -14,8 +14,6 @@ export class Product {
   @Column()
   description: string;
 
-  // @Column('decimal')
-  // price: number;
   @Column()
   price: number;
 
@@ -26,8 +24,7 @@ export class Product {
   @Exclude({ toPlainOnly: true })
   category: Category;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  @ManyToOne((_type) => User, (user) => user.products, { eager: false })
+  @ManyToOne(() => User, (user) => user.products, { eager: false })
   @Exclude({ toPlainOnly: true }) //json
   user: User;
 }

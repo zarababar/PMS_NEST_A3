@@ -20,7 +20,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { GetUser } from 'src/users/get-user.decorator';
 import { User } from 'src/users/user.entity';
 import { Category } from 'src/categories/category.entity';
-import { CustomFilesInterceptor } from 'src/upload/images.interceptor';
+import { CustomFilesInterceptor } from 'src/imageUpload/images.interceptor';
 
 @Controller('products')
 @UseGuards(AuthGuard()) //route protecting
@@ -52,26 +52,6 @@ export class ProductsController {
       }
     }
   }
-
-  @Get('/:id')
-  async getProductInfo(
-    @Param('id') id: string,
-    @GetUser() user: User,
-  ): Promise<Product> {
-    return await this.productService.getProductInfo(id, user);
-  }
-
-  @Get()
-  async getAllProducts(): Promise<Product[]> {
-    return this.productService.getAllProducts();
-  }
-  @Delete('/:id')
-  async deleteProduct(
-    @Param('id') id: string,
-    @GetUser() user: User,
-  ): Promise<void> {
-    return this.productService.deleteProduct(id, user);
-  }
   @Patch('/:id/product')
   @UseInterceptors(CustomFilesInterceptor.createInterceptor('images', 5))
   async updateProduct(
@@ -101,15 +81,86 @@ export class ProductsController {
       }
     }
   }
+  @Delete('/:id')
+  async deleteProduct(
+    @Param('id') id: string,
+    @GetUser() user: User,
+  ): Promise<void> {
+    try {
+      await this.productService.deleteProduct(id, user);
+    } catch (error) {
+      if (
+        error instanceof ForbiddenException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'An error occurred while deleting the product.',
+      );
+    }
+  }
+
+  @Get('/:id')
+  async getProductInfo(
+    @Param('id') id: string,
+    @GetUser() user: User,
+  ): Promise<Product> {
+    try {
+      return await this.productService.getProductInfo(id, user);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'An error occurred while retrieving the product information.',
+      );
+    }
+  }
+
+  @Get()
+  async getAllProducts(): Promise<Product[]> {
+    try {
+      return await this.productService.getAllProducts();
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'An error occurred while retrieving all products.',
+      );
+    }
+  }
 
   @Get('/category/:id')
   async getCategoryProducts(
     @Param('id') categoryId: string,
   ): Promise<Category> {
-    return this.productService.getCategoryProducts(categoryId);
+    try {
+      return await this.productService.getCategoryProducts(categoryId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'An error occurred while retrieving the category products.',
+      );
+    }
   }
+
   @Get('/user/:id')
-  async getUserProducts(@Param('id') userId: string): Promise<Product[]> {
-    return this.productService.getUserProducts(userId);
+  async getUserProducts(
+    @GetUser() loggedInUser: User,
+    @Param('id') userId: string,
+  ): Promise<Product[]> {
+    try {
+      return await this.productService.getUserProducts(loggedInUser, userId);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'An error occurred while retrieving the user products.',
+      );
+    }
   }
 }

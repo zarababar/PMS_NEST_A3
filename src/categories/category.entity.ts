@@ -1,7 +1,7 @@
 import { Product } from 'src/products/product.entity';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
-@Entity('categroies')
+@Entity('categories')
 export class Category {
   @PrimaryGeneratedColumn('uuid') //automatically generate PK id
   id: string;
